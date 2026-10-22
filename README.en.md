@@ -4,7 +4,24 @@
 
 EvidenceAgent-RL is an Agentic-RL research engineering project for evidence-grounded paper question answering. It studies auditable training and evaluation workflows that incorporate evidence boundaries, retrieval strategy memory, and tool interaction.
 
-## Research tooling
+## Offline quickstart
+
+Use Python 3.11+ in a fresh virtual environment:
+
+```sh
+python -m pip install -e .
+python -m evidence_agent_rl.demo
+python -m unittest discover -s tests -v
+```
+
+The demo uses fictional documents and scripted actions on CPU, with no model
+service or credentials. It checks evidence boundaries and deterministic replay;
+it is not an LLM benchmark, semantic entailment test, or RL training result.
+The broader research workflows and external datasets are not validated by it.
+JSON goes to stdout; `--output demo-report.json` saves to a new file without
+overwriting an existing one. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Research tooling (existing snapshot)
 
 - Retrieval and tool-use environment
 - Evidence-constrained policy and memory mechanisms
@@ -21,6 +38,6 @@ A public repository should contain source, generic configurations, and only appr
 
 ## License
 
-No license has been selected. Verify provenance and licensing for code, paper corpora, models, datasets, and generated examples before release.
+Code is licensed under [MIT](LICENSE). External corpora, models and datasets retain their own terms and are not included.
 
 

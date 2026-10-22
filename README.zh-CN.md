@@ -4,7 +4,23 @@
 
 EvidenceAgent-RL 是一个围绕论文证据问答的 Agentic-RL 研究工程，研究如何把证据边界、检索策略记忆和工具交互纳入可审计的训练与评测流程。
 
-## 研究工程
+## 离线快速开始
+
+使用 Python 3.11+，在独立虚拟环境中执行：
+
+```sh
+python -m pip install -e .
+python -m evidence_agent_rl.demo
+python -m unittest discover -s tests -v
+```
+
+此示例只用虚构资料和固定动作，在 CPU 上运行，不需要模型服务或凭据。
+它用于验证引用边界与确定性重放，不是模型基准测试、语义蕴含验证或 RL 训练结果。
+完整研究流程及外部数据不在此次验证范围内。
+JSON 默认输出到终端，`--output demo-report.json` 仅创建新文件，不覆盖已有文件。
+见 [贡献说明](CONTRIBUTING.md)。
+
+## 研究工程（已有快照）
 
 - 检索与工具调用环境
 - 证据约束的策略/记忆机制
@@ -21,6 +37,6 @@ English: [README.en.md](README.en.md)
 
 ## 许可
 
-许可证待确认。核验代码、论文语料、模型、数据集和生成样例的来源及许可后再发布。
+代码采用 [MIT 许可证](LICENSE)。外部论文语料、模型和数据集不包含在仓库内，其许可单独适用。
 
 
