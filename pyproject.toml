@@ -10,7 +10,7 @@ version = "0.1.0"
 description = "Replayable harness for evidence-grounded search-agent reinforcement learning"
 requires-python = ">=3.11"
 dependencies = []
-readme = "README.en.md"
+readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 keywords = ["evidence-grounding", "reinforcement-learning", "agents", "reproducibility"]

@@ -11,7 +11,7 @@ python -m evidence_agent_rl.demo
 ```
 
 If one of these commands fails, see the troubleshooting table in
-[README.en.md](README.en.md) before opening an issue.
+[README.md](README.md) before opening an issue.
 
 Use synthetic fixtures for regression tests. Report the command, Python version,
 expected behavior and observed behavior when opening an issue. Keep fixes focused;
