@@ -32,14 +32,25 @@ the original bytes are untouched.
 Five behaviours, all deterministic and offline:
 
 1. A supported claim is accepted once its evidence handle has been citation-checked.
-2. An unchecked, fabricated, or disallowed-DOI handle cannot support an answer.
+2. A claim cannot be supported by an unchecked handle, a fabricated handle, or a
+   handle whose DOI is outside the task's allowed set.
 3. Evidence handles do not cross episode boundaries, and search stays inside the
    task's corpus scope.
-4. Tool budget cannot go negative, and a rejected action costs nothing.
-5. A serialised action trace replays to a byte-identical state.
+4. Tool budget never goes below zero, and an action rejected by argument
+   validation or by an insufficient budget is not charged. A rejection raised
+   *inside* a tool handler is charged, because the budget is debited before the
+   handler runs.
+5. A serialised action trace replays to a state equal to the original one.
 
-`tests/test_harness_contract.py` covers the same five boundaries independently of
-the demo, so a regression in one does not hide behind the other.
+`tests/test_harness_contract.py` covers these boundaries as repository regression
+tests: unchecked citation, cross-episode handle, budget floor, free invalid
+arguments, corpus scope, and replay equality.
+
+Coverage is not uniform across item 2. The demo itself exercises the unchecked
+handle and the cross-episode handle. The fabricated-handle and disallowed-DOI cases
+were confirmed by manual inspection of the harness, but neither has a dedicated
+regression test in this repository yet, so they are weaker evidence than the
+tested cases above.
 
 ## Troubleshooting
 
