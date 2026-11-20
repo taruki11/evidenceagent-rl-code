@@ -656,13 +656,32 @@ def _answer_short_with_support(
         harness.state.done = True
         harness.state.firewall_violations += 1
         return Observation(False, "answer", error=error)
-    if getattr(harness, "require_distinct_support_documents", False) and handles:
+    required_documents = (
+        harness.required_support_document_count()
+        if hasattr(harness, "required_support_document_count")
+        else (2 if getattr(harness, "require_distinct_support_documents", False) else 1)
+    )
+    if required_documents >= 2 and handles:
         documents = {
             harness.state.evidence[h].document_id
             for h in handles
             if h in harness.state.evidence
         }
-        if len(documents) < 2:
+        if len(documents) < required_documents:
+            if (
+                getattr(harness, "support_repair", False)
+                and getattr(harness, "support_repair_hints_left", 0) > 0
+            ):
+                harness.support_repair_hints_left -= 1
+                return Observation(
+                    False,
+                    "answer",
+                    error=(
+                        "the submitted support spans must come from two different documents; "
+                        "search or inspect another document and answer again "
+                        f"({harness.support_repair_hints_left} repair attempt(s) left)"
+                    ),
+                )
             harness.state.done = True
             return Observation(
                 False, "answer",

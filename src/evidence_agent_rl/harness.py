@@ -34,6 +34,14 @@ from .skills import (
     build_skill_registry,
     validate_arguments_against,
 )
+from .claim_support import (
+    DEFAULT_MIN_COVERAGE,
+    claim_support_gaps as _claim_support_gaps,
+)
+from .public_contract import (
+    matched_document_titles as _matched_document_titles,
+    required_distinct_documents as _required_distinct_documents,
+)
 
 
 class EvidenceHarness:
@@ -53,6 +61,12 @@ class EvidenceHarness:
         selectable_protect_bridge: bool = False,
         answer_protocol: str = "atomic_claims",
         require_distinct_support_documents: bool = False,
+        claim_support_guard: bool = False,
+        claim_support_min_coverage: float = DEFAULT_MIN_COVERAGE,
+        claim_support_max_hints: int = 3,
+        public_support_contract: bool = False,
+        support_repair: bool = False,
+        support_repair_max_hints: int = 2,
     ) -> None:
         if max_budget <= 0:
             raise ValueError("max_budget must be positive")
@@ -65,6 +79,30 @@ class EvidenceHarness:
             raise ValueError(f"answer_protocol must be one of {ANSWER_PROTOCOLS}")
         if not isinstance(require_distinct_support_documents, bool):
             raise TypeError("require_distinct_support_documents must be a boolean")
+        if not isinstance(claim_support_guard, bool):
+            raise TypeError("claim_support_guard must be a boolean")
+        if isinstance(claim_support_min_coverage, bool) or not isinstance(
+            claim_support_min_coverage, (int, float)
+        ):
+            raise TypeError("claim_support_min_coverage must be a number")
+        if not 0.0 <= float(claim_support_min_coverage) <= 1.0:
+            raise ValueError("claim_support_min_coverage must be within [0, 1]")
+        if isinstance(claim_support_max_hints, bool) or not isinstance(
+            claim_support_max_hints, int
+        ):
+            raise TypeError("claim_support_max_hints must be an integer")
+        if claim_support_max_hints < 0:
+            raise ValueError("claim_support_max_hints must be >= 0")
+        if not isinstance(public_support_contract, bool):
+            raise TypeError("public_support_contract must be a boolean")
+        if not isinstance(support_repair, bool):
+            raise TypeError("support_repair must be a boolean")
+        if isinstance(support_repair_max_hints, bool) or not isinstance(
+            support_repair_max_hints, int
+        ):
+            raise TypeError("support_repair_max_hints must be an integer")
+        if support_repair_max_hints < 0:
+            raise ValueError("support_repair_max_hints must be >= 0")
         if not isinstance(sequential_multihop_gate, bool):
             raise TypeError("sequential_multihop_gate must be a boolean")
         if sequential_multihop_gate and policy_context_version != "v6":
@@ -105,6 +143,30 @@ class EvidenceHarness:
         # Declared public structural requirement: the submitted support spans must come from
         # two different documents.  Off by default so no earlier behaviour moves.
         self.require_distinct_support_documents = require_distinct_support_documents
+        # ``claim_support_guard`` adds one gold-free check at answer time: the claim text must be
+        # carried by the spans the claim itself cites (numeric containment + content-token
+        # coverage).  It reads only public data, never a hidden TaskSpec field.  Off by default so
+        # the frozen behaviour, including the rendered policy state, stays byte-for-byte identical.
+        self.claim_support_guard = claim_support_guard
+        self.claim_support_min_coverage = float(claim_support_min_coverage)
+        self.claim_support_max_hints = claim_support_max_hints
+        # ``public_support_contract`` derives a minimum support count from public runtime
+        # information only: the question text and the titles of the candidate documents the
+        # harness was constructed with.  When the question names at least two distinct
+        # documents, the answer must draw on two distinct documents; otherwise the historical
+        # minimum (task_type-driven) is unchanged.  Off by default so the frozen behaviour,
+        # including the rendered policy state, stays byte-for-byte identical.
+        self.public_support_contract = public_support_contract
+        # ``support_repair`` turns the first contract violation into a non-terminal repair
+        # opportunity instead of ending the episode.  It is off by default so the frozen
+        # hard-reject behaviour (and its rendered state) is unchanged.
+        self.support_repair = support_repair
+        self.support_repair_max_hints = support_repair_max_hints
+        self.support_repair_hints_left = (
+            support_repair_max_hints if support_repair else 0
+        )
+        self.public_contract_matched_document_titles: tuple[str, ...] = ()
+        self.public_contract_required_documents = 1
         self.sequential_multihop_gate = sequential_multihop_gate
         self.public_bridge_query_controller = public_bridge_query_controller
         self.document_scoped_followup_search = document_scoped_followup_search
@@ -143,6 +205,30 @@ class EvidenceHarness:
         # The corpus is immutable, but the task's ``corpus_scope`` is not, so the
         # IDF table must not leak across episodes.
         self._idf_cache = None
+        # Repair hints are a per-episode allowance, so a replay always starts from the same
+        # number the policy state advertises.
+        self.claim_support_hints_left = self.claim_support_max_hints
+        self.support_repair_hints_left = (
+            self.support_repair_max_hints if self.support_repair else 0
+        )
+        if self.public_support_contract:
+            # Mirror the retrieval scope: only documents in the task's own corpus scope are
+            # candidates, so titles from other questions' scopes can never raise the
+            # requirement (retrieval uses the same filter, skills.py:84).
+            titles = [
+                document.title
+                for document in self.documents.values()
+                if not task.corpus_scope or document.corpus_scope == task.corpus_scope
+            ]
+            self.public_contract_matched_document_titles = _matched_document_titles(
+                task.question, titles
+            )
+            self.public_contract_required_documents = _required_distinct_documents(
+                task.question, titles
+            )
+        else:
+            self.public_contract_matched_document_titles = ()
+            self.public_contract_required_documents = 1
         return self.state
 
     def step(self, action: Action) -> Observation:
@@ -220,6 +306,21 @@ class EvidenceHarness:
                 self.state.done = True
             observation = Observation(False, "invalid_action", error=f"unknown skill: {action.name}")
             return self._record(action, observation)
+        if (
+            self.claim_support_guard
+            and action.name == "answer"
+            and self.claim_support_hints_left > 0
+        ):
+            # Single-variable intervention: reject a locally unsupported answer with a
+            # gold-free repair hint.  It runs *after* the availability gate, so an answer the
+            # agent could not legally submit is never turned into a repairable one, and it
+            # spends no budget and does not terminate the episode, so abstention rates cannot
+            # be raised by construction.  Once the allowance is exhausted the answer falls
+            # through to the frozen scoring path.
+            hint = self._claim_support_hint(action)
+            if hint is not None:
+                self.claim_support_hints_left -= 1
+                return self._record(action, hint)
         self.state.remaining_budget -= skill.cost
         try:
             observation = skill.handler(self, action.arguments)
@@ -340,12 +441,108 @@ class EvidenceHarness:
                     return f"evidence handle was not citation-checked: {handle_id}"
         return None
 
+    def claim_support_gaps(self, claims: tuple[Claim, ...]) -> tuple[dict[str, Any], ...]:
+        """Return one record per claim whose own cited spans do not carry its text.
+
+        Gold-free by construction: the check reads the claim text plus the text of the handles
+        that claim cites, and nothing else.  Disabled (and therefore an empty result) unless
+        ``claim_support_guard`` is on.
+        """
+
+        if not self.claim_support_guard:
+            return ()
+        return _claim_support_gaps(
+            claims,
+            self.state.evidence,
+            min_coverage=self.claim_support_min_coverage,
+        )
+
+    def _claim_support_hint(self, action: Action) -> Observation | None:
+        """Build the repair hint for an answer that fails the local support check."""
+
+        if self.answer_protocol == ANSWER_PROTOCOL_SHORT:
+            raw_answer = action.arguments.get("answer")
+            raw_handles = action.arguments.get("supporting_handles")
+            if not isinstance(raw_answer, str) or not isinstance(raw_handles, list) or not raw_handles:
+                return None
+            claims: tuple[Claim, ...] = (
+                Claim(
+                    text=raw_answer.strip(),
+                    evidence_handles=tuple(str(item) for item in raw_handles),
+                ),
+            )
+        else:
+            try:
+                claims = self.parse_claims(action.arguments.get("claims"))
+            except (TypeError, ValueError):
+                # Malformed claims are the argument-validation path's job, not ours.
+                return None
+        if self.policy_context_version in {"v5", "v6"} and any(
+            len(claim.evidence_handles) != 1 for claim in claims
+        ):
+            # The atomic answer contract rejects that shape itself; do not preempt it with a
+            # support hint, otherwise the two error paths would disagree about the same answer.
+            return None
+        gaps = self.claim_support_gaps(claims)
+        if not gaps:
+            return None
+        # ``react.build_policy_context`` strips ``observation.data`` for v3-v6 and keeps only
+        # ok/kind/error, so the actionable detail has to live in ``error`` to reach the model;
+        # the structured payload stays in ``data`` for traces, logs and the UI.
+        details: list[str] = []
+        for gap in gaps[:3]:
+            parts: list[str] = []
+            if gap["missing_numbers"]:
+                parts.append(
+                    "numbers absent from the cited span: "
+                    + ", ".join(gap["missing_numbers"][:4])
+                )
+            parts.append(
+                "content coverage {:.2f} < {:.2f}".format(
+                    gap["content_coverage"], gap["min_coverage"]
+                )
+            )
+            details.append(f"claim {gap['claim_index'] + 1}: " + "; ".join(parts))
+        return Observation(
+            False,
+            "claim_support_gap",
+            {
+                "gaps": [dict(gap) for gap in gaps],
+                "hints_remaining": self.claim_support_hints_left - 1,
+                "min_coverage": self.claim_support_min_coverage,
+            },
+            error=(
+                "one or more claims are not carried by the span(s) they cite ("
+                + " | ".join(details)
+                + "); re-read the cited span, cite the span that actually contains the "
+                "statement, or search again before answering"
+            ),
+        )
+
+    def required_support_document_count(self) -> int:
+        """How many distinct documents a submitted answer must draw on.
+
+        Composed from two public rules: the historical declared flag
+        (``require_distinct_support_documents``) and the question-derived contract
+        (``public_support_contract``).  Either one can raise the requirement to 2; nothing can
+        lower it.  Off is 1, which is the historical behaviour byte for byte.
+        """
+
+        if self.require_distinct_support_documents:
+            return 2
+        if self.public_support_contract and self.public_contract_required_documents >= 2:
+            return self.public_contract_required_documents
+        return 1
+
     def minimum_answer_evidence_handles(self) -> int:
         """Return the public task contract's minimum checked support count."""
 
         if not hasattr(self, "state"):
             return 1
-        return 2 if self.state.task.task_type == "multi_hop" else 1
+        count = 2 if self.state.task.task_type == "multi_hop" else 1
+        if self.public_support_contract:
+            count = max(count, self.public_contract_required_documents)
+        return count
 
     def fresh_multihop_search_required(self) -> bool:
         """Require a public search after the first multi-hop evidence selection."""
@@ -470,6 +667,28 @@ class EvidenceHarness:
             # prompt intervention, breaking the single-variable design.  The scope actually
             # applied is recorded machine-side instead: every search observation carries a
             # ``scoped_search`` block, which v3-v6 strip from the model-visible context.
+        if self.claim_support_guard:
+            # Only the allowance and the threshold are exposed.  The check itself consumes no
+            # hidden data, so there is nothing here the policy could overfit to.
+            rendered["claim_support_guard"] = {
+                "enabled": True,
+                "hints_remaining": self.claim_support_hints_left,
+                "min_coverage": self.claim_support_min_coverage,
+            }
+        if self.public_support_contract:
+            # The requirement is derived from the question and the corpus titles, both of
+            # which the policy can see; there is no hidden data in this block.
+            rendered["public_support_contract"] = {
+                "enabled": True,
+                "required_distinct_documents": self.public_contract_required_documents,
+                "matched_document_titles": list(
+                    self.public_contract_matched_document_titles
+                ),
+            }
+            if self.support_repair:
+                rendered["public_support_contract"]["repair_hints_remaining"] = (
+                    self.support_repair_hints_left
+                )
         if self.policy_context_version == "v2":
             rendered["memory_decisions"] = [
                 {
