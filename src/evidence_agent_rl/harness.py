@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from copy import deepcopy
 from dataclasses import replace
 from typing import Any
@@ -26,6 +26,12 @@ from .models import (
     StrategyMemory,
     TaskSpec,
     TraceStep,
+)
+from .sufficiency_verifier import (
+    SufficiencyLabel,
+    VerifierError,
+    VerifierOutput,
+    VerifierRequest,
 )
 from .skills import (
     SPAN_SCORING_MODES,
@@ -67,6 +73,11 @@ class EvidenceHarness:
         public_support_contract: bool = False,
         support_repair: bool = False,
         support_repair_max_hints: int = 2,
+        sufficiency_verifier: Any | None = None,
+        sufficiency_repair_max_hints: int = 2,
+        sufficiency_allow_early_abstain: bool = False,
+        sufficiency_unanswerable_mode: str = "hint",
+        sufficiency_mode: str = "tri",
     ) -> None:
         if max_budget <= 0:
             raise ValueError("max_budget must be positive")
@@ -103,6 +114,22 @@ class EvidenceHarness:
             raise TypeError("support_repair_max_hints must be an integer")
         if support_repair_max_hints < 0:
             raise ValueError("support_repair_max_hints must be >= 0")
+        if sufficiency_verifier is not None and not callable(
+            getattr(sufficiency_verifier, "score", None)
+        ):
+            raise TypeError("sufficiency_verifier must expose a callable score(request)")
+        if isinstance(sufficiency_repair_max_hints, bool) or not isinstance(
+            sufficiency_repair_max_hints, int
+        ):
+            raise TypeError("sufficiency_repair_max_hints must be an integer")
+        if sufficiency_repair_max_hints < 0:
+            raise ValueError("sufficiency_repair_max_hints must be >= 0")
+        if not isinstance(sufficiency_allow_early_abstain, bool):
+            raise TypeError("sufficiency_allow_early_abstain must be a boolean")
+        if sufficiency_unanswerable_mode not in {"hint", "auto_abstain"}:
+            raise ValueError("sufficiency_unanswerable_mode must be 'hint' or 'auto_abstain'")
+        if sufficiency_mode not in {"tri", "binary"}:
+            raise ValueError("sufficiency_mode must be 'tri' or 'binary'")
         if not isinstance(sequential_multihop_gate, bool):
             raise TypeError("sequential_multihop_gate must be a boolean")
         if sequential_multihop_gate and policy_context_version != "v6":
@@ -165,6 +192,14 @@ class EvidenceHarness:
         self.support_repair_hints_left = (
             support_repair_max_hints if support_repair else 0
         )
+        self.sufficiency_verifier = sufficiency_verifier
+        self.sufficiency_repair_max_hints = sufficiency_repair_max_hints
+        self.sufficiency_allow_early_abstain = sufficiency_allow_early_abstain
+        self.sufficiency_unanswerable_mode = sufficiency_unanswerable_mode
+        self.sufficiency_mode = sufficiency_mode
+        self.sufficiency_hints_left = (
+            sufficiency_repair_max_hints if sufficiency_verifier is not None else 0
+        )
         self.public_contract_matched_document_titles: tuple[str, ...] = ()
         self.public_contract_required_documents = 1
         self.sequential_multihop_gate = sequential_multihop_gate
@@ -211,6 +246,11 @@ class EvidenceHarness:
         self.support_repair_hints_left = (
             self.support_repair_max_hints if self.support_repair else 0
         )
+        self.sufficiency_hints_left = (
+            self.sufficiency_repair_max_hints if self.sufficiency_verifier is not None else 0
+        )
+        self.state.sufficiency_label = None
+        self.state.sufficiency_hints_exhausted = False
         if self.public_support_contract:
             # Mirror the retrieval scope: only documents in the task's own corpus scope are
             # candidates, so titles from other questions' scopes can never raise the
@@ -543,6 +583,73 @@ class EvidenceHarness:
         if self.public_support_contract:
             count = max(count, self.public_contract_required_documents)
         return count
+
+    def sufficiency_request(
+        self, submitted_handles: Sequence[str] | None = None,
+    ) -> VerifierRequest:
+        """Build a gold-free public request for the external sufficiency verifier.
+
+        With ``submitted_handles`` the request contains only the evidence the current
+        ``answer`` action actually cited.  ``None`` keeps the historical whole-ledger
+        behaviour for callers that do not submit an answer.
+        """
+        if self.sufficiency_verifier is None:
+            raise RuntimeError("no sufficiency verifier is configured")
+        if submitted_handles is None:
+            handles = list(self.state.evidence.values())
+        else:
+            handles = [
+                self.state.evidence[handle_id]
+                for handle_id in submitted_handles
+                if handle_id in self.state.evidence
+            ]
+        selected = []
+        for handle in handles:
+            document = self.documents.get(handle.document_id)
+            span = next(
+                (item for item in document.spans if item.span_id == handle.span_id), None
+            ) if document is not None else None
+            if document is None or span is None:
+                continue
+            selected.append({"title": document.title, "text": span.text})
+        candidate_ids = set(self.state.candidate_pool) | set(self.state.retrieved_documents)
+        candidate_titles = sorted({
+            self.documents[document_id].title
+            for document_id in candidate_ids
+            if document_id in self.documents
+            and (
+                not self.state.task.corpus_scope
+                or self.documents[document_id].corpus_scope == self.state.task.corpus_scope
+            )
+        })
+        return VerifierRequest(
+            question=self.state.task.question,
+            selected_spans=tuple(selected),
+            distinct_doc_count=len({item["title"] for item in selected}),
+            search_turns=len(self.state.query_history),
+            remaining_budget=self.state.remaining_budget,
+            candidate_titles=tuple(candidate_titles[:8]),
+        )
+
+    def verify_sufficiency(
+        self, submitted_handles: Sequence[str] | None = None,
+    ) -> VerifierOutput:
+        """Run the external verifier, recording its label and failing closed to NEED_MORE."""
+        if self.sufficiency_verifier is None:
+            raise RuntimeError("no sufficiency verifier is configured")
+        try:
+            output = self.sufficiency_verifier.score(
+                self.sufficiency_request(submitted_handles=submitted_handles))
+            if not isinstance(output, VerifierOutput):
+                raise TypeError("verifier score() must return VerifierOutput")
+        except Exception as exc:  # external service/model failure must not silently allow
+            output = VerifierOutput(
+                SufficiencyLabel.NEED_MORE_EVIDENCE,
+                {},
+                reason=f"verifier_error: {type(exc).__name__}: {exc}",
+            )
+        self.state.sufficiency_label = output.label.value
+        return output
 
     def fresh_multihop_search_required(self) -> bool:
         """Require a public search after the first multi-hop evidence selection."""
@@ -960,7 +1067,11 @@ class EvidenceHarness:
                 if checked
             }
             if len(checked_handles) >= self.minimum_answer_evidence_handles():
-                if not self.require_distinct_support_documents:
+                if self.sufficiency_verifier is not None:
+                    # The external verifier gets to judge one-document submissions; the
+                    # mechanical min-2 gate is evaluated after the verifier in skills.py.
+                    available.add("answer")
+                elif not self.require_distinct_support_documents:
                     available.add("answer")
                 elif len(
                     {
@@ -970,6 +1081,17 @@ class EvidenceHarness:
                     }
                 ) >= 2:
                     available.add("answer")
+            if self.sufficiency_allow_early_abstain and self.state.query_history:
+                available.add("abstain")
+            if (
+                self.sufficiency_verifier is not None
+                and (
+                    self.state.sufficiency_label == SufficiencyLabel.UNANSWERABLE.value
+                    or self.state.sufficiency_hints_exhausted
+                )
+                and self.state.query_history
+            ):
+                available.add("abstain")
             if self.state.query_history and (
                 self.state.remaining_budget == 0 or not selectable
             ):

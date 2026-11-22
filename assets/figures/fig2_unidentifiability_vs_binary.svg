@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="420" viewBox="0 0 1040 420" role="img" aria-label="Partial Observability Unidentifiability vs Decoupled Binary Sufficiency">
+<defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; fill: #1f2937; }
+    .title { font-size: 16px; font-weight: 700; }
+    .subtitle { font-size: 12px; fill: #4b5563; }
+    .panel-title { font-size: 13.5px; font-weight: 700; fill: #111827; }
+    .axis-label { font-size: 11.5px; font-weight: 600; fill: #374151; }
+    .tick { font-size: 10.5px; fill: #4b5563; }
+    .val { font-size: 10px; font-weight: 600; fill: #111827; }
+    .legend { font-size: 11px; fill: #374151; }
+    .note { font-size: 10px; fill: #6b7280; }
+  </style>
+</defs>
+<rect width="1040" height="420" fill="#ffffff" rx="8"/>
+
+<text x="32" y="34" class="title">Figure 2. Why 3-Class Verification Deadlocks — and Why Binary Decoupling Succeeds (Dev, n=500)</text>
+<text x="32" y="54" class="subtitle">Under partial observability, NEED_MORE vs. UNANSWERABLE is unidentifiable from 1 span + titles; decoupling SUFFICIENT vs. INSUFFICIENT reaches 0.962 macro-F1.</text>
+<text x="65" y="86" class="panel-title">(a) 3-Class Deadlock: False-Abstain vs. Recall Collapse</text>
+<line x1="65" y1="342.0" x2="485" y2="342.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="57" y="346.0" text-anchor="end" class="tick">0.0</text>
+<line x1="65" y1="294.0" x2="485" y2="294.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="57" y="298.0" text-anchor="end" class="tick">0.2</text>
+<line x1="65" y1="246.0" x2="485" y2="246.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="57" y="250.0" text-anchor="end" class="tick">0.4</text>
+<line x1="65" y1="198.0" x2="485" y2="198.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="57" y="202.0" text-anchor="end" class="tick">0.6</text>
+<line x1="65" y1="150.0" x2="485" y2="150.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="57" y="154.0" text-anchor="end" class="tick">0.8</text>
+<line x1="65" y1="102.0" x2="485" y2="102.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="57" y="106.0" text-anchor="end" class="tick">1.0</text>
+<line x1="65" y1="102" x2="65" y2="342" stroke="#374151" stroke-width="1"/>
+<line x1="65" y1="342" x2="485" y2="342" stroke="#374151" stroke-width="1"/>
+<line x1="65" y1="174.0" x2="485" y2="174.0" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="6,4"/>
+<text x="481" y="169.0" text-anchor="end" class="note" fill="#dc2626" font-weight="700">Pre-reg Gate (0.70)</text>
+<rect x="105.0" y="146.6" width="38" height="195.4" fill="#3b82f6" rx="3"/>
+<text x="124.0" y="141.6" text-anchor="middle" class="val">0.814</text>
+<rect x="151.0" y="161.6" width="38" height="180.4" fill="#8b5cf6" rx="3"/>
+<text x="170.0" y="156.6" text-anchor="middle" class="val">0.751</text>
+<rect x="197.0" y="277.2" width="38" height="64.8" fill="#ef4444" rx="3"/>
+<text x="216.0" y="272.2" text-anchor="middle" class="val">0.270</text>
+<text x="170.0" y="362" text-anchor="middle" class="axis-label">V1 (tau_unans=0.15)</text>
+<rect x="305.0" y="154.2" width="38" height="187.8" fill="#3b82f6" rx="3"/>
+<text x="324.0" y="149.2" text-anchor="middle" class="val">0.782</text>
+<rect x="351.0" y="191.6" width="38" height="150.4" fill="#8b5cf6" rx="3"/>
+<text x="370.0" y="186.6" text-anchor="middle" class="val">0.626</text>
+<rect x="397.0" y="318.0" width="38" height="24.0" fill="#ef4444" rx="3"/>
+<text x="416.0" y="313.0" text-anchor="middle" class="val">0.100</text>
+<text x="370.0" y="362" text-anchor="middle" class="axis-label">V2 (tau_unans=0.80)</text>
+<rect x="65" y="380" width="11" height="11" fill="#3b82f6" rx="2"/>
+<text x="80" y="389" class="legend">Dev Macro-F1</text>
+<rect x="210" y="380" width="11" height="11" fill="#8b5cf6" rx="2"/>
+<text x="225" y="389" class="legend">UNANSWERABLE F1</text>
+<rect x="355" y="380" width="11" height="11" fill="#ef4444" rx="2"/>
+<text x="370" y="389" class="legend">NEED_MORE->UNANS Error (d=1)</text>
+<text x="565" y="86" class="panel-title">(b) Decoupled Binary Verifier (SUFFICIENT vs. INSUFFICIENT)</text>
+<line x1="565" y1="342.0" x2="1000" y2="342.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="557" y="346.0" text-anchor="end" class="tick">0.0</text>
+<line x1="565" y1="294.0" x2="1000" y2="294.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="557" y="298.0" text-anchor="end" class="tick">0.2</text>
+<line x1="565" y1="246.0" x2="1000" y2="246.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="557" y="250.0" text-anchor="end" class="tick">0.4</text>
+<line x1="565" y1="198.0" x2="1000" y2="198.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="557" y="202.0" text-anchor="end" class="tick">0.6</text>
+<line x1="565" y1="150.0" x2="1000" y2="150.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="557" y="154.0" text-anchor="end" class="tick">0.8</text>
+<line x1="565" y1="102.0" x2="1000" y2="102.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="557" y="106.0" text-anchor="end" class="tick">1.0</text>
+<line x1="565" y1="102" x2="565" y2="342" stroke="#374151" stroke-width="1"/>
+<line x1="565" y1="342" x2="1000" y2="342" stroke="#374151" stroke-width="1"/>
+<line x1="565" y1="138.0" x2="1000" y2="138.0" stroke="#059669" stroke-width="1.4" stroke-dasharray="6,4"/>
+<text x="996" y="133.0" text-anchor="end" class="note" fill="#047857" font-weight="700">Binary Gate (0.85)</text>
+<rect x="582.5" y="111.2" width="52" height="230.8" fill="#059669" rx="4"/>
+<text x="608.5" y="105.2" text-anchor="middle" class="val">0.9616</text>
+<text x="608.5" y="358" text-anchor="middle" class="tick">Overall</text>
+<text x="608.5" y="371" text-anchor="middle" class="tick">Macro-F1</text>
+<rect x="669.5" y="105.2" width="52" height="236.8" fill="#10b981" rx="4"/>
+<text x="695.5" y="99.2" text-anchor="middle" class="val">0.9868</text>
+<text x="695.5" y="358" text-anchor="middle" class="tick">distinct=1</text>
+<text x="695.5" y="371" text-anchor="middle" class="tick">Macro-F1</text>
+<rect x="756.5" y="118.8" width="52" height="223.2" fill="#14b8a6" rx="4"/>
+<text x="782.5" y="112.8" text-anchor="middle" class="val">0.9299</text>
+<text x="782.5" y="358" text-anchor="middle" class="tick">distinct=2</text>
+<text x="782.5" y="371" text-anchor="middle" class="tick">Macro-F1</text>
+<rect x="843.5" y="115.0" width="52" height="227.0" fill="#0284c7" rx="4"/>
+<text x="869.5" y="109.0" text-anchor="middle" class="val">0.9459</text>
+<text x="869.5" y="358" text-anchor="middle" class="tick">SUFFICIENT</text>
+<text x="869.5" y="371" text-anchor="middle" class="tick">F1</text>
+<rect x="930.5" y="107.4" width="52" height="234.6" fill="#2563eb" rx="4"/>
+<text x="956.5" y="101.4" text-anchor="middle" class="val">0.9773</text>
+<text x="956.5" y="358" text-anchor="middle" class="tick">INSUFFICIENT</text>
+<text x="956.5" y="371" text-anchor="middle" class="tick">F1</text>
+<text x="565" y="390" class="note" fill="#047857" font-weight="600">Calibration &amp; Speed: ECE = 0.0045 (<= 0.15) | BF16 P50 = 14.50 ms, P95 = 16.57 ms (<= 30 ms)</text>
+<text x="32" y="406" class="note">Source: verifier_phase3b_20261121/metrics.json, verifier_phase3c_20261121/metrics.json, RESULTS_HV_MIXED180_VERIFIER_BINARY_20261122.md.</text>
+</svg>

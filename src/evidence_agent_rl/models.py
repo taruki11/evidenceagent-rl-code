@@ -157,6 +157,8 @@ class EpisodeState:
     abstention_reason: str | None = None
     done: bool = False
     firewall_violations: int = 0
+    sufficiency_label: str | None = None
+    sufficiency_hints_exhausted: bool = False
 
     @property
     def covered_facets(self) -> frozenset[str]:

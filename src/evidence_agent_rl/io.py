@@ -71,7 +71,7 @@ def load_tasks(path: str | Path) -> tuple[TaskSpec, ...]:
     tasks: list[TaskSpec] = []
     for record in _read_jsonl(path):
         split = str(_require(record, "split"))
-        if split not in {"train", "verifierbench", "dev", "test", "ood"}:
+        if split not in {"train", "verifierbench", "dev", "test", "ood", "heldout"}:
             raise ValueError(f"invalid task split: {split}")
         tasks.append(
             TaskSpec(

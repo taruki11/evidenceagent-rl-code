@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="400" viewBox="0 0 980 400" role="img" aria-label="Four-Phase Scientific Progression from Development to Blind Held-Out">
+<defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; fill: #1f2937; }
+    .title { font-size: 16px; font-weight: 700; }
+    .subtitle { font-size: 12px; fill: #4b5563; }
+    .panel-title { font-size: 13.5px; font-weight: 700; fill: #111827; }
+    .axis-label { font-size: 11.5px; font-weight: 600; fill: #374151; }
+    .tick { font-size: 10.5px; fill: #4b5563; }
+    .val { font-size: 10px; font-weight: 600; fill: #111827; }
+    .legend { font-size: 11px; fill: #374151; }
+    .note { font-size: 10px; fill: #6b7280; }
+  </style>
+</defs>
+<rect width="980" height="400" fill="#ffffff" rx="8"/>
+
+<text x="32" y="34" class="title">Figure 3. Controlled Scientific Progression: Static Baselines -> 3-Class -> Decoupled Binary -> Blind Held-Out</text>
+<text x="32" y="54" class="subtitle">Rep 1 / Rep 2 mean Macro-Regime Utility (higher is better) and Selective Risk (lower is better) across all frozen phases.</text>
+<line x1="78" y1="317.0" x2="908" y2="317.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="68" y="321.0" text-anchor="end" class="tick" fill="#059669">0.00</text>
+<text x="918" y="321.0" text-anchor="start" class="tick" fill="#dc2626">0.00</text>
+<line x1="78" y1="279.5" x2="908" y2="279.5" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="68" y="283.5" text-anchor="end" class="tick" fill="#059669">0.10</text>
+<text x="918" y="283.5" text-anchor="start" class="tick" fill="#dc2626">0.25</text>
+<line x1="78" y1="242.0" x2="908" y2="242.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="68" y="246.0" text-anchor="end" class="tick" fill="#059669">0.20</text>
+<text x="918" y="246.0" text-anchor="start" class="tick" fill="#dc2626">0.50</text>
+<line x1="78" y1="204.5" x2="908" y2="204.5" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="68" y="208.5" text-anchor="end" class="tick" fill="#059669">0.30</text>
+<text x="918" y="208.5" text-anchor="start" class="tick" fill="#dc2626">0.75</text>
+<line x1="78" y1="167.0" x2="908" y2="167.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="68" y="171.0" text-anchor="end" class="tick" fill="#059669">0.40</text>
+<text x="918" y="171.0" text-anchor="start" class="tick" fill="#dc2626">1.00</text>
+<line x1="78" y1="129.5" x2="908" y2="129.5" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="68" y="133.5" text-anchor="end" class="tick" fill="#059669">0.50</text>
+<text x="918" y="133.5" text-anchor="start" class="tick" fill="#dc2626">1.25</text>
+<line x1="78" y1="92.0" x2="908" y2="92.0" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="68" y="96.0" text-anchor="end" class="tick" fill="#059669">0.60</text>
+<text x="918" y="96.0" text-anchor="start" class="tick" fill="#dc2626">1.50</text>
+<rect x="78" y="92" width="830" height="225" fill="none" stroke="#374151" stroke-width="1"/>
+<line x1="838.8" y1="92" x2="838.8" y2="317" stroke="#6b7280" stroke-width="1.2" stroke-dasharray="5,4"/>
+<text x="846.8" y="108" class="note" font-weight="700" fill="#111827">Blind Held-Out</text>
+<text x="830.8" y="108" text-anchor="end" class="note" font-weight="700" fill="#4b5563">Dev (hv-mixed180)</text>
+<text x="78.0" y="335" text-anchor="middle" class="tick" font-weight="400">Block A</text>
+<text x="78.0" y="348" text-anchor="middle" class="tick" font-weight="400">A0 (off)</text>
+<text x="216.3" y="335" text-anchor="middle" class="tick" font-weight="400">Block A</text>
+<text x="216.3" y="348" text-anchor="middle" class="tick" font-weight="400">A1 (min-2)</text>
+<text x="354.7" y="335" text-anchor="middle" class="tick" font-weight="400">Block A</text>
+<text x="354.7" y="348" text-anchor="middle" class="tick" font-weight="400">A2 (contract)</text>
+<text x="493.0" y="335" text-anchor="middle" class="tick" font-weight="400">Phase 3B</text>
+<text x="493.0" y="348" text-anchor="middle" class="tick" font-weight="400">C2 (+abstain)</text>
+<text x="631.3" y="335" text-anchor="middle" class="tick" font-weight="400">Phase 3B</text>
+<text x="631.3" y="348" text-anchor="middle" class="tick" font-weight="400">Vh (3-class)</text>
+<text x="769.7" y="335" text-anchor="middle" class="tick" font-weight="700">Phase 3D</text>
+<text x="769.7" y="348" text-anchor="middle" class="tick" font-weight="700">Vh-bin (Dev)</text>
+<text x="908.0" y="335" text-anchor="middle" class="tick" font-weight="700">Phase 4</text>
+<text x="908.0" y="348" text-anchor="middle" class="tick" font-weight="700">Vh-bin (Held-out)</text>
+<polyline fill="none" stroke="#059669" stroke-width="2.6" points="78.0,236.8 216.3,249.3 354.7,222.2 493.0,220.2 631.3,200.5 769.7,133.1 908.0,158.2"/>
+<polyline fill="none" stroke="#dc2626" stroke-width="2.4" stroke-dasharray="6,3" points="78.0,165.8 216.3,120.8 354.7,237.0 493.0,244.5 631.3,252.0 769.7,284.5 908.0,265.7"/>
+<circle cx="78.0" cy="236.8" r="5" fill="#059669" stroke="#ffffff" stroke-width="1.5"/>
+<text x="78.0" y="227.8" text-anchor="middle" class="val" fill="#047857">0.214</text>
+<circle cx="216.3" cy="249.3" r="5" fill="#059669" stroke="#ffffff" stroke-width="1.5"/>
+<text x="216.3" y="240.3" text-anchor="middle" class="val" fill="#047857">0.180</text>
+<circle cx="354.7" cy="222.2" r="5" fill="#059669" stroke="#ffffff" stroke-width="1.5"/>
+<text x="354.7" y="213.2" text-anchor="middle" class="val" fill="#047857">0.253</text>
+<circle cx="493.0" cy="220.2" r="5" fill="#059669" stroke="#ffffff" stroke-width="1.5"/>
+<text x="493.0" y="211.2" text-anchor="middle" class="val" fill="#047857">0.258</text>
+<circle cx="631.3" cy="200.5" r="5" fill="#059669" stroke="#ffffff" stroke-width="1.5"/>
+<text x="631.3" y="191.5" text-anchor="middle" class="val" fill="#047857">0.311</text>
+<circle cx="769.7" cy="133.1" r="5" fill="#059669" stroke="#ffffff" stroke-width="1.5"/>
+<text x="769.7" y="124.1" text-anchor="middle" class="val" fill="#047857">0.490</text>
+<circle cx="908.0" cy="158.2" r="5" fill="#059669" stroke="#ffffff" stroke-width="1.5"/>
+<text x="908.0" y="149.2" text-anchor="middle" class="val" fill="#047857">0.423</text>
+<rect x="73.8" y="161.6" width="8.4" height="8.4" fill="#dc2626" stroke="#ffffff" stroke-width="1.3"/>
+<text x="78.0" y="182.8" text-anchor="middle" class="val" fill="#b91c1c">1.008</text>
+<rect x="212.1" y="116.6" width="8.4" height="8.4" fill="#dc2626" stroke="#ffffff" stroke-width="1.3"/>
+<text x="216.3" y="137.8" text-anchor="middle" class="val" fill="#b91c1c">1.308</text>
+<rect x="350.5" y="232.8" width="8.4" height="8.4" fill="#dc2626" stroke="#ffffff" stroke-width="1.3"/>
+<text x="354.7" y="254.0" text-anchor="middle" class="val" fill="#b91c1c">0.533</text>
+<rect x="488.8" y="240.3" width="8.4" height="8.4" fill="#dc2626" stroke="#ffffff" stroke-width="1.3"/>
+<text x="493.0" y="261.5" text-anchor="middle" class="val" fill="#b91c1c">0.483</text>
+<rect x="627.1" y="247.8" width="8.4" height="8.4" fill="#dc2626" stroke="#ffffff" stroke-width="1.3"/>
+<text x="631.3" y="269.0" text-anchor="middle" class="val" fill="#b91c1c">0.433</text>
+<rect x="765.5" y="280.3" width="8.4" height="8.4" fill="#dc2626" stroke="#ffffff" stroke-width="1.3"/>
+<text x="769.7" y="301.5" text-anchor="middle" class="val" fill="#b91c1c">0.217</text>
+<rect x="903.8" y="261.5" width="8.4" height="8.4" fill="#dc2626" stroke="#ffffff" stroke-width="1.3"/>
+<text x="908.0" y="282.7" text-anchor="middle" class="val" fill="#b91c1c">0.342</text>
+<text x="20" y="204.5" text-anchor="middle" class="axis-label" fill="#047857" transform="rotate(-90 20 204.5)">Macro-Regime Utility (↑)</text>
+<text x="962" y="204.5" text-anchor="middle" class="axis-label" fill="#b91c1c" transform="rotate(90 962 204.5)">Selective Risk (↓)</text>
+<circle cx="258" cy="376" r="5" fill="#059669"/>
+<text x="270" y="380" class="legend">Macro-Regime Utility (Rep 1/2 mean, ↑)</text>
+<rect x="553" y="371.5" width="9" height="9" fill="#dc2626"/>
+<text x="568" y="380" class="legend">Selective Risk (Rep 1/2 mean, ↓)</text>
+</svg>

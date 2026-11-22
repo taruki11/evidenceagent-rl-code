@@ -366,7 +366,10 @@ class OpenAICompatibleDecisionProvider:
         logprobs: bool = False,
         return_token_ids: bool = False,
         structured_action_output: bool = False,
+        disable_thinking: bool = True,
     ) -> None:
+        if not isinstance(disable_thinking, bool):
+            raise ValueError("disable_thinking must be boolean")
         if temperature < 0:
             raise ValueError("temperature cannot be negative")
         if not 0 < top_p <= 1:
@@ -386,6 +389,7 @@ class OpenAICompatibleDecisionProvider:
         self.logprobs = logprobs
         self.return_token_ids = return_token_ids
         self.structured_action_output = structured_action_output
+        self.disable_thinking = disable_thinking
 
     @classmethod
     def from_environment(
@@ -402,6 +406,7 @@ class OpenAICompatibleDecisionProvider:
         return_token_ids: bool = False,
         structured_action_output: bool = False,
         timeout_seconds: int | None = None,
+        disable_thinking: bool = True,
     ) -> "OpenAICompatibleDecisionProvider":
         api_key = os.environ.get(api_key_env) if api_key_env else None
         resolved_timeout = (
@@ -421,6 +426,7 @@ class OpenAICompatibleDecisionProvider:
             logprobs=logprobs,
             return_token_ids=return_token_ids,
             structured_action_output=structured_action_output,
+            disable_thinking=disable_thinking,
         )
 
     @staticmethod
@@ -461,7 +467,6 @@ class OpenAICompatibleDecisionProvider:
             "temperature": self.temperature,
             "top_p": self.top_p,
             "max_tokens": self.max_tokens,
-            "chat_template_kwargs": {"enable_thinking": False},
             "messages": [
                 {"role": "system", "content": POLICY_SYSTEM_PROMPT},
                 {
@@ -470,6 +475,8 @@ class OpenAICompatibleDecisionProvider:
                 },
             ],
         }
+        if self.disable_thinking:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
         if self.seed is not None:
             payload["seed"] = self.seed
         if self.logprobs:

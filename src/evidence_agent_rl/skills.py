@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from .hotpotqa_answer import ANSWER_PROTOCOL_ATOMIC, ANSWER_PROTOCOL_SHORT
 from .models import Claim, Guidance, GuidanceKind, Observation
+from .sufficiency_verifier import SufficiencyLabel
 
 if TYPE_CHECKING:
     from .harness import EvidenceHarness
@@ -650,18 +651,99 @@ def _answer_short_with_support(
             )
         if item not in handles:  # deduplicate, preserve submission order
             handles.append(item)
+    if not handles and getattr(harness, "sufficiency_verifier", None) is not None:
+        harness.state.done = True
+        return Observation(
+            False, "answer",
+            error="the sufficiency verifier requires at least one checked supporting handle",
+        )
     claim = Claim(text=raw_answer.strip(), evidence_handles=tuple(handles))
     error = harness.validate_answer_evidence((claim,))
     if error:
         harness.state.done = True
         harness.state.firewall_violations += 1
         return Observation(False, "answer", error=error)
+    verifier_approved = False
+    if getattr(harness, "sufficiency_verifier", None) is not None:
+        gate = harness.verify_sufficiency(handles)
+        verifier_approved = gate.label is SufficiencyLabel.SUFFICIENT
+        if gate.label is SufficiencyLabel.UNANSWERABLE:
+            detail = gate.reason or "the current corpus evidence is insufficient"
+            if getattr(harness, "sufficiency_unanswerable_mode", "hint") == "auto_abstain":
+                harness.state.abstention_reason = f"sufficiency_verifier: {detail}"
+                harness.state.done = True
+                return Observation(
+                    False, "abstention",
+                    error=(
+                        "the sufficiency verifier judged the corpus insufficient; "
+                        "the episode abstained with a recorded reason"
+                    ),
+                )
+            return Observation(
+                False, "answer",
+                error=(
+                    "the sufficiency verifier judges the current corpus insufficient; "
+                    "call abstain with a reason (do not keep answering)"
+                ),
+            )
+        if gate.label in (
+            SufficiencyLabel.NEED_MORE_EVIDENCE, SufficiencyLabel.INSUFFICIENT,
+        ):
+            binary = getattr(harness, "sufficiency_mode", "tri") == "binary"
+            unsubmitted = set(harness.state.evidence) - set(handles)
+            cite_hint = (
+                " cite all supporting evidence handles you selected or search another document"
+                if unsubmitted else " search or inspect another document"
+            )
+            problem = "insufficient" if binary else "needs more evidence"
+            if getattr(harness, "sufficiency_hints_left", 0) > 0:
+                harness.sufficiency_hints_left -= 1
+                return Observation(
+                    False, "answer",
+                    error=(
+                        f"the sufficiency verifier says the submitted evidence is {problem};"
+                        f"{cite_hint} and answer again "
+                        f"({harness.sufficiency_hints_left} sufficiency hint(s) left)"
+                    ),
+                )
+            if not getattr(harness.state, "sufficiency_hints_exhausted", False):
+                harness.state.sufficiency_hints_exhausted = True
+                if binary and getattr(
+                    harness, "sufficiency_unanswerable_mode", "hint"
+                ) == "auto_abstain":
+                    harness.state.abstention_reason = (
+                        "sufficiency_verifier: insufficient_after_repairs"
+                    )
+                    harness.state.done = True
+                    return Observation(
+                        False, "abstention",
+                        error=(
+                            "the binary verifier still finds the evidence insufficient "
+                            "after repairs; the episode abstained with a recorded reason"
+                        ),
+                    )
+                return Observation(
+                    False, "answer",
+                    error=(
+                        f"the sufficiency verifier says the submitted evidence is still {problem}; "
+                        "abstain is now available: call abstain with a reason. "
+                        "One more answer will terminate the episode."
+                    ),
+                )
+            harness.state.done = True
+            return Observation(
+                False, "answer",
+                error=(
+                    f"the sufficiency verifier says the submitted evidence is still {problem} "
+                    "and the abstain hint was ignored; episode terminated"
+                ),
+            )
     required_documents = (
         harness.required_support_document_count()
         if hasattr(harness, "required_support_document_count")
         else (2 if getattr(harness, "require_distinct_support_documents", False) else 1)
     )
-    if required_documents >= 2 and handles:
+    if required_documents >= 2 and handles and not verifier_approved:
         documents = {
             harness.state.evidence[h].document_id
             for h in handles
