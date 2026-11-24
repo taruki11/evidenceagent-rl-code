@@ -159,6 +159,7 @@ class EpisodeState:
     firewall_violations: int = 0
     sufficiency_label: str | None = None
     sufficiency_hints_exhausted: bool = False
+    sufficiency_last_insufficient: bool = False
 
     @property
     def covered_facets(self) -> frozenset[str]:

@@ -338,8 +338,28 @@ class ReActRunner:
             harness.step(action)
             if harness.state.done:
                 break
+            budget_observation = harness.controller_abstain_if_exhausted()
+            if budget_observation is not None:
+                decisions.append(
+                    PolicyDecision(
+                        "",
+                        Action("abstain", {"reason": "sufficiency_verifier: exploration_exhausted"}),
+                        policy_context_json="",
+                    )
+                )
+                break
         if not harness.state.done:
-            harness.step(Action("__decision_limit__", {}))
+            abstain_observation = harness.controller_abstain_if_exhausted(decision_limit=True)
+            if abstain_observation is not None:
+                decisions.append(
+                    PolicyDecision(
+                        "",
+                        Action("abstain", {"reason": "sufficiency_verifier: exploration_exhausted"}),
+                        policy_context_json="",
+                    )
+                )
+            else:
+                harness.step(Action("__decision_limit__", {}))
         return ReActRunResult(harness.state, tuple(decisions))
 
     @staticmethod

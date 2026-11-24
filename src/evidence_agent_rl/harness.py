@@ -78,6 +78,7 @@ class EvidenceHarness:
         sufficiency_allow_early_abstain: bool = False,
         sufficiency_unanswerable_mode: str = "hint",
         sufficiency_mode: str = "tri",
+        controller_abstain_on_exhaustion: bool = False,
     ) -> None:
         if max_budget <= 0:
             raise ValueError("max_budget must be positive")
@@ -130,6 +131,8 @@ class EvidenceHarness:
             raise ValueError("sufficiency_unanswerable_mode must be 'hint' or 'auto_abstain'")
         if sufficiency_mode not in {"tri", "binary"}:
             raise ValueError("sufficiency_mode must be 'tri' or 'binary'")
+        if not isinstance(controller_abstain_on_exhaustion, bool):
+            raise TypeError("controller_abstain_on_exhaustion must be a boolean")
         if not isinstance(sequential_multihop_gate, bool):
             raise TypeError("sequential_multihop_gate must be a boolean")
         if sequential_multihop_gate and policy_context_version != "v6":
@@ -197,6 +200,7 @@ class EvidenceHarness:
         self.sufficiency_allow_early_abstain = sufficiency_allow_early_abstain
         self.sufficiency_unanswerable_mode = sufficiency_unanswerable_mode
         self.sufficiency_mode = sufficiency_mode
+        self.controller_abstain_on_exhaustion = controller_abstain_on_exhaustion
         self.sufficiency_hints_left = (
             sufficiency_repair_max_hints if sufficiency_verifier is not None else 0
         )
@@ -251,6 +255,7 @@ class EvidenceHarness:
         )
         self.state.sufficiency_label = None
         self.state.sufficiency_hints_exhausted = False
+        self.state.sufficiency_last_insufficient = False
         if self.public_support_contract:
             # Mirror the retrieval scope: only documents in the task's own corpus scope are
             # candidates, so titles from other questions' scopes can never raise the
@@ -412,6 +417,27 @@ class EvidenceHarness:
             ):
                 return "span was already selected"
         return None
+
+    def controller_abstain_if_exhausted(self, *, decision_limit: bool = False) -> Observation | None:
+        """Controller-owned terminal abstention when repair/exploration is exhausted.
+
+        This is intentionally opt-in.  It does not require the policy to choose ``abstain``:
+        after an INSUFFICIENT verifier verdict, repeated searches can consume the decision
+        limit without another answer, so the controller records the abstention itself.
+        """
+        if not self.controller_abstain_on_exhaustion:
+            return None
+        if self.state.done or not self.state.sufficiency_last_insufficient:
+            return None
+        if not decision_limit and self.state.remaining_budget != 0:
+            return None
+        reason = "sufficiency_verifier: exploration_exhausted"
+        self.state.abstention_reason = reason
+        self.state.done = True
+        return self._record(
+            Action("abstain", {"reason": reason}),
+            Observation(False, "abstention", error=reason),
+        )
 
     def _record(self, action: Action, observation: Observation) -> Observation:
         self.state.trace.append(

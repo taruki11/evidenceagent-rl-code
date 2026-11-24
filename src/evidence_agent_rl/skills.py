@@ -667,6 +667,7 @@ def _answer_short_with_support(
     if getattr(harness, "sufficiency_verifier", None) is not None:
         gate = harness.verify_sufficiency(handles)
         verifier_approved = gate.label is SufficiencyLabel.SUFFICIENT
+        harness.state.sufficiency_last_insufficient = gate.label is not SufficiencyLabel.SUFFICIENT
         if gate.label is SufficiencyLabel.UNANSWERABLE:
             detail = gate.reason or "the current corpus evidence is insufficient"
             if getattr(harness, "sufficiency_unanswerable_mode", "hint") == "auto_abstain":
@@ -731,6 +732,10 @@ def _answer_short_with_support(
                     ),
                 )
             harness.state.done = True
+            if getattr(harness, "controller_abstain_on_exhaustion", False):
+                harness.state.abstention_reason = (
+                    "sufficiency_verifier: exploration_exhausted"
+                )
             return Observation(
                 False, "answer",
                 error=(

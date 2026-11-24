@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Generate publication-quality, zero-dependency SVG figures for EvidenceAgent-RL Paper v3.
 
-All numbers are taken verbatim from the frozen Phase 2-4 audit documents:
+All numbers are taken verbatim from the frozen Phase 2-6C audit documents:
 - Block A: docs/harness_vs_sft/RESULTS_HV_MIXED180_BLOCKA_20261120.md
 - Phase 3B (3-class V1): docs/harness_vs_sft/RESULTS_HV_MIXED180_VERIFIER_20261121.md
 - Phase 3C (3-class V2): docs/harness_vs_sft/RESULTS_HV_MIXED180_VERIFIER_V2_20261121.md
 - Phase 3D (Binary dev): docs/harness_vs_sft/RESULTS_HV_MIXED180_VERIFIER_BINARY_20261122.md
-- Phase 4 (Blind held-out): docs/harness_vs_sft/RESULTS_HV_MIXED180_HELDOUT_20261122.md
+- Phase 4 (Blind held-out v1): docs/harness_vs_sft/RESULTS_HV_MIXED180_HELDOUT_20261122.md
+- Phase 5 (Cross-model Gemma): docs/harness_vs_sft/RESULTS_HV_MIXED180_HELDOUT_CROSSMODEL_20261123.md
+- Phase 6 (Controller held-out v2): docs/harness_vs_sft/RESULTS_HV_MIXED180_HELDOUT_V2_CONTROLLER_20261123.md
+- Phase 6C (Mechanism analysis): docs/harness_vs_sft/ANALYSIS_PHASE6_MECHANISM_20261124.md
 """
 from __future__ import annotations
 
@@ -262,29 +265,29 @@ def generate_fig2_unidentifiability() -> str:
 
 
 def generate_fig3_progression() -> str:
-    """Fig 3: Four-Phase Progression from Block A to Blind Held-Out (Macro Utility & Selective Risk)."""
-    w, h = 980, 400
-    parts = [svg_header(w, h, "Four-Phase Scientific Progression from Development to Blind Held-Out")]
+    """Fig 3: Six-Phase Progression from Block A to Blind Held-Out v1 & v2 (Macro Utility & Selective Risk)."""
+    w, h = 1040, 410
+    parts = [svg_header(w, h, "Scientific Progression from Development to Dual-Model Blind Held-Out")]
     parts.append(
-        '<text x="32" y="34" class="title">Figure 3. Controlled Scientific Progression: Static Baselines -> 3-Class -> Decoupled Binary -> Blind Held-Out</text>'
+        '<text x="32" y="34" class="title">Figure 3. Controlled Scientific Progression: Static Baselines -&gt; 3-Class -&gt; Binary -&gt; Controller Held-Out v2</text>'
     )
     parts.append(
         '<text x="32" y="54" class="subtitle">'
-        "Rep 1 / Rep 2 mean Macro-Regime Utility (higher is better) and Selective Risk (lower is better) across all frozen phases."
+        "Rep 1 / Rep 2 mean Macro-Regime Utility (higher is better) and Selective Risk (lower is better) across frozen phases."
         "</text>"
     )
 
     stages = [
         ("Block A\nA0 (off)", 0.2139, 1.0083),
-        ("Block A\nA1 (min-2)", 0.1804, 1.3083),
         ("Block A\nA2 (contract)", 0.2528, 0.5333),
-        ("Phase 3B\nC2 (+abstain)", 0.2580, 0.4833),
         ("Phase 3B\nVh (3-class)", 0.3106, 0.4333),
         ("Phase 3D\nVh-bin (Dev)", 0.4905, 0.2167),
-        ("Phase 4\nVh-bin (Held-out)", 0.4235, 0.3417),
+        ("Phase 4\nHeld-out v1", 0.4235, 0.3417),
+        ("Phase 6\nQwen4 v2", 0.4641, 0.2917),
+        ("Phase 6\nGemma12B v2", 0.3520, 0.1333),
     ]
 
-    x0, y0, pw, ph = 78, 92, 830, 225
+    x0, y0, pw, ph = 84, 92, 872, 230
     # Left Y axis: Macro Utility [0.0, 0.60]; Right Y axis: Selective Risk [0.0, 1.50]
     for i in range(7):
         frac = i / 6.0
@@ -295,9 +298,9 @@ def generate_fig3_progression() -> str:
     parts.append(f'<rect x="{x0}" y="{y0}" width="{pw}" height="{ph}" fill="none" stroke="#374151" stroke-width="1"/>')
 
     # Vertical separator before Held-out
-    sep_x = x0 + (5.5 / (len(stages) - 1)) * pw
+    sep_x = x0 + (3.5 / (len(stages) - 1)) * pw
     parts.append(f'<line x1="{sep_x:.1f}" y1="{y0}" x2="{sep_x:.1f}" y2="{y0 + ph}" stroke="#6b7280" stroke-width="1.2" stroke-dasharray="5,4"/>')
-    parts.append(f'<text x="{sep_x + 8:.1f}" y="{y0 + 16}" class="note" font-weight="700" fill="#111827">Blind Held-Out</text>')
+    parts.append(f'<text x="{sep_x + 8:.1f}" y="{y0 + 16}" class="note" font-weight="700" fill="#111827">Blind Held-Out (v1 &amp; Cross-Model v2)</text>')
     parts.append(f'<text x="{sep_x - 8:.1f}" y="{y0 + 16}" text-anchor="end" class="note" font-weight="700" fill="#4b5563">Dev (hv-mixed180)</text>')
 
     pts_m, pts_r = [], []
@@ -308,7 +311,7 @@ def generate_fig3_progression() -> str:
         pts_m.append((px, pm_y, macro))
         pts_r.append((px, pr_y, risk))
         for li, line in enumerate(slabel.split("\n")):
-            fw = "700" if "Vh-bin" in slabel else "400"
+            fw = "700" if ("Vh-bin" in slabel or "v2" in slabel or "Held-out" in slabel) else "400"
             parts.append(f'<text x="{px:.1f}" y="{y0 + ph + 18 + li * 13}" text-anchor="middle" class="tick" font-weight="{fw}">{escape(line)}</text>')
 
     parts.append(
@@ -342,12 +345,112 @@ def generate_fig3_progression() -> str:
     return "\n".join(parts)
 
 
+def generate_fig4_crossmodel_phase6() -> str:
+    """Fig 4: Phase 6 Cross-Model Blind Held-Out v2 (Qwen4+V8 & Gemma-3-12B) + Abstention Ownership."""
+    w, h = 1040, 440
+    parts = [svg_header(w, h, "Phase 6 Cross-Model Transfer and Controller-Owned Abstention Breakdown")]
+    parts.append(
+        '<text x="32" y="34" class="title">Figure 4. Cross-Model Blind Held-Out v2 (Phase 6): Zero-Shot Transfer &amp; Abstention Ownership</text>'
+    )
+    parts.append(
+        '<text x="32" y="54" class="subtitle">'
+        "Same frozen 568M BF16 Binary Verifier + Controller-Owned Abstention passes C-H1/C-H2/C-H3 on both Qwen3-4B+V8 and Gemma-3-12B."
+        "</text>"
+    )
+
+    # Panel (a): Macro Utility comparison across A0 / A1 / A2 / Vh-ctrl for both models (Rep 1/2 mean)
+    lx0, ly0, lw, lh = 65, 102, 440, 250
+    parts.append(f'<text x="{lx0}" y="86" class="panel-title">(a) Macro-Regime Utility on Fresh Held-Out v2 (Rep 1/2 Mean)</text>')
+    y_max = 0.55
+    for tick in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]:
+        yy = ly0 + lh - (tick / y_max) * lh
+        parts.append(f'<line x1="{lx0}" y1="{yy:.1f}" x2="{lx0 + lw}" y2="{yy:.1f}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>')
+        parts.append(f'<text x="{lx0 - 8}" y="{yy + 4:.1f}" text-anchor="end" class="tick">{tick:.1f}</text>')
+    parts.append(f'<line x1="{lx0}" y1="{ly0}" x2="{lx0}" y2="{ly0 + lh}" stroke="#374151" stroke-width="1"/>')
+    parts.append(f'<line x1="{lx0}" y1="{ly0 + lh}" x2="{lx0 + lw}" y2="{ly0 + lh}" stroke="#374151" stroke-width="1"/>')
+
+    model_groups = [
+        ("Qwen3-4B + V8 (4B SFT)", [0.2195, 0.1561, 0.2361, 0.4641]),
+        ("Gemma-3-12B (Cross-Vendor, 0-SFT)", [0.1833, 0.0084, 0.1889, 0.3520]),
+    ]
+    arm_colors = ["#9ca3af", "#ef4444", "#f59e0b", "#059669"]
+    arm_names = ["A0 (off)", "A1 (min-2)", "A2 (contract)", "Vh-ctrl (Ours)"]
+    bw = 34
+    for g_idx, (mlabel, vals) in enumerate(model_groups):
+        gx = lx0 + 32 + g_idx * 215
+        for j, v in enumerate(vals):
+            bh = (v / y_max) * lh
+            bx = gx + j * (bw + 8)
+            by = ly0 + lh - bh
+            parts.append(f'<rect x="{bx:.1f}" y="{by:.1f}" width="{bw}" height="{bh:.1f}" fill="{arm_colors[j]}" rx="3"/>')
+            parts.append(f'<text x="{bx + bw / 2:.1f}" y="{by - 5:.1f}" text-anchor="middle" class="val">{v:.3f}</text>')
+        parts.append(f'<text x="{gx + 2 * bw + 12:.1f}" y="{ly0 + lh + 20}" text-anchor="middle" class="axis-label">{escape(mlabel)}</text>')
+
+    for i, (aname, acol) in enumerate(zip(arm_names, arm_colors)):
+        xx = lx0 + i * 110
+        parts.append(f'<rect x="{xx}" y="{ly0 + lh + 38}" width="11" height="11" fill="{acol}" rx="2"/>')
+        parts.append(f'<text x="{xx + 15}" y="{ly0 + lh + 47}" class="legend">{aname}</text>')
+
+    # Panel (b): Stacked bar of 0-gold explicit abstention ownership (Rep 1)
+    rx0, ry0, rw, rh = 575, 102, 425, 250
+    parts.append(f'<text x="{rx0}" y="86" class="panel-title">(b) 0-Gold Explicit Abstention Trigger Source (Rep 1)</text>')
+    y2_max = 50
+    for tick in [0, 10, 20, 30, 40, 50]:
+        yy = ry0 + rh - (tick / y2_max) * rh
+        parts.append(f'<line x1="{rx0}" y1="{yy:.1f}" x2="{rx0 + rw}" y2="{yy:.1f}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>')
+        parts.append(f'<text x="{rx0 - 8}" y="{yy + 4:.1f}" text-anchor="end" class="tick">{tick}</text>')
+    parts.append(f'<line x1="{rx0}" y1="{ry0}" x2="{rx0}" y2="{ry0 + rh}" stroke="#374151" stroke-width="1"/>')
+    parts.append(f'<line x1="{rx0}" y1="{ry0 + rh}" x2="{rx0 + rw}" y2="{ry0 + rh}" stroke="#374151" stroke-width="1"/>')
+
+    # Data: (label, model_abstain, ctrl_budget0, ctrl_12step, ctrl_hint_ignored)
+    stacks = [
+        ("Qwen4 Vh-ctrl\n(41/60 explicit)", 30, 10, 0, 1),
+        ("Gemma Vh-bin\n(Phase 5: 0/60)", 0, 0, 0, 0),
+        ("Gemma Vh-ctrl\n(Phase 6: 36/60)", 0, 2, 15, 19),
+    ]
+    scols = ["#2563eb", "#0ea5e9", "#f59e0b", "#10b981"]
+    snames = ["Model abstain", "Ctrl: budget=0", "Ctrl: 12-step cap", "Ctrl: hint ignored"]
+    sbw = 76
+    step = rw / len(stacks)
+    for i, (slabel, a, b, c, d) in enumerate(stacks):
+        bx = rx0 + i * step + (step - sbw) / 2
+        cur_y = ry0 + rh
+        total = a + b + c + d
+        for val, col in zip([a, b, c, d], scols):
+            if val <= 0:
+                continue
+            bh = (val / y2_max) * rh
+            cur_y -= bh
+            parts.append(f'<rect x="{bx:.1f}" y="{cur_y:.1f}" width="{sbw}" height="{bh:.1f}" fill="{col}" stroke="#ffffff" stroke-width="1"/>')
+            if val >= 5:
+                parts.append(f'<text x="{bx + sbw / 2:.1f}" y="{cur_y + bh / 2 + 4:.1f}" text-anchor="middle" class="val" fill="#ffffff">{val}</text>')
+        parts.append(f'<text x="{bx + sbw / 2:.1f}" y="{cur_y - 6:.1f}" text-anchor="middle" class="val">{total}/60</text>')
+        for li, line in enumerate(slabel.split("\n")):
+            parts.append(f'<text x="{bx + sbw / 2:.1f}" y="{ry0 + rh + 17 + li * 13}" text-anchor="middle" class="tick">{escape(line)}</text>')
+
+    for i, (sname, scol) in enumerate(zip(snames, scols)):
+        xx = rx0 + (i % 2) * 205
+        yy = ry0 + rh + 48 + (i // 2) * 16
+        parts.append(f'<rect x="{xx}" y="{yy - 9}" width="11" height="11" fill="{scol}" rx="2"/>')
+        parts.append(f'<text x="{xx + 15}" y="{yy}" class="legend">{sname}</text>')
+
+    parts.append(
+        f'<text x="32" y="{h - 12}" class="note">'
+        "Source: RESULTS_HV_MIXED180_HELDOUT_V2_CONTROLLER_20261123.md &amp; ANALYSIS_PHASE6_MECHANISM_20261124.md. "
+        "Gemma 0-gold abstention is 100% controller-owned (36/36 in both reps)."
+        "</text>"
+    )
+    parts.append("</svg>\n")
+    return "\n".join(parts)
+
+
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     files = {
         "fig1_impossible_triangle_heldout.svg": generate_fig1_heldout_main(),
         "fig2_unidentifiability_vs_binary.svg": generate_fig2_unidentifiability(),
         "fig3_progression_dev_to_heldout.svg": generate_fig3_progression(),
+        "fig4_crossmodel_controller_phase6.svg": generate_fig4_crossmodel_phase6(),
     }
     for name, content in files.items():
         path = OUT_DIR / name
