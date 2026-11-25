@@ -12,6 +12,9 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import threading
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -320,6 +323,211 @@ class LocalSufficiencyVerifier:
         return self.calibration.decide(probabilities, reason="local_verifier")
 
 
+
+# ---------------------------------------------------------------------------
+# LLM-as-a-Judge baseline (Phase 7)
+# ---------------------------------------------------------------------------
+
+_LLM_JUDGE_SYSTEM = (
+    "You are a strict evidence-sufficiency judge. Given a question and the submitted "
+    "supporting spans, decide whether those spans contain enough evidence to answer the "
+    "question. Return exactly one uppercase label, SUFFICIENT or INSUFFICIENT, and no "
+    "other text."
+)
+
+
+@dataclass(frozen=True)
+class LLMJudgeCall:
+    latency_ms: float
+    prompt_tokens: int
+    completion_tokens: int
+    label: str
+    parse_ok: bool
+    status: int
+
+
+class LLMJudgeStats:
+    """Thread-safe per-call latency/token accounting for the judge baseline."""
+
+    def __init__(self) -> None:
+        self._calls: list[LLMJudgeCall] = []
+        self._lock = threading.Lock()
+
+    def record(self, call: LLMJudgeCall) -> None:
+        with self._lock:
+            self._calls.append(call)
+
+    @property
+    def calls(self) -> tuple[LLMJudgeCall, ...]:
+        with self._lock:
+            return tuple(self._calls)
+
+    def summary(self) -> dict[str, Any]:
+        calls = self.calls
+        latencies = [c.latency_ms for c in calls]
+        ordered = sorted(latencies)
+
+        def pct(p: float) -> float:
+            if not ordered:
+                return 0.0
+            index = min(len(ordered) - 1, max(0, math.ceil(len(ordered) * p) - 1))
+            return float(ordered[index])
+
+        return {
+            "calls": len(calls),
+            "latency_ms_p50": pct(0.50),
+            "latency_ms_p95": pct(0.95),
+            "latency_ms_max": float(max(latencies)) if latencies else 0.0,
+            "prompt_tokens": sum(c.prompt_tokens for c in calls),
+            "completion_tokens": sum(c.completion_tokens for c in calls),
+            "total_tokens": sum(c.prompt_tokens + c.completion_tokens for c in calls),
+            "parse_failures": sum(not c.parse_ok for c in calls),
+            "labels": {
+                "SUFFICIENT": sum(c.label == "SUFFICIENT" for c in calls),
+                "INSUFFICIENT": sum(c.label == "INSUFFICIENT" for c in calls),
+            },
+        }
+
+
+class LLMJudgeSufficiencyVerifier:
+    """Zero-shot LLM-as-a-Judge binary sufficiency baseline over vLLM's OpenAI API.
+
+    The public request is reduced to exactly question + submitted spans + distinct-document
+    count.  No gold field, regime, candidate title, search-turn or budget field is sent.
+    Greedy decoding is used; malformed output fails closed to INSUFFICIENT.
+    """
+
+    kind = "llm_judge"
+
+    def __init__(
+        self,
+        base_url: str,
+        model: str,
+        *,
+        timeout_seconds: float = 60.0,
+        max_tokens: int = 8,
+        api_key: str | None = None,
+        api_key_env: str | None = None,
+        disable_thinking: bool = True,
+    ) -> None:
+        if not str(base_url).startswith(("http://", "https://")):
+            raise ValueError("base_url must be http(s)")
+        if not str(model).strip():
+            raise ValueError("model is required")
+        if float(timeout_seconds) <= 0:
+            raise ValueError("timeout_seconds must be positive")
+        if int(max_tokens) <= 0:
+            raise ValueError("max_tokens must be positive")
+        self.base_url = str(base_url).rstrip("/")
+        self.model = str(model)
+        self.timeout_seconds = float(timeout_seconds)
+        self.max_tokens = int(max_tokens)
+        self.api_key = api_key if api_key is not None else (
+            os.environ.get(api_key_env) if api_key_env else None
+        )
+        self.disable_thinking = bool(disable_thinking)
+        self.stats = LLMJudgeStats()
+
+    def _endpoint(self) -> str:
+        if self.base_url.endswith("/chat/completions"):
+            return self.base_url
+        return self.base_url + "/chat/completions"
+
+    def _payload(self, request: VerifierRequest) -> dict[str, Any]:
+        # Deliberately only question, submitted spans, and distinct count.  Candidate titles,
+        # search turns and remaining budget are not sent to the external judge.
+        spans = "\n".join(
+            f"- [{str(s.get('title', '')).strip()}] {str(s.get('text', '')).strip()}"
+            for s in request.selected_spans
+        ) or "- (none)"
+        user = (
+            f"Question: {request.question.strip()}\n"
+            f"Submitted supporting spans:\n{spans}\n"
+            f"Distinct supporting documents: {request.distinct_doc_count}\n"
+            "Label:"
+        )
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": _LLM_JUDGE_SYSTEM},
+                {"role": "user", "content": user},
+            ],
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "max_tokens": self.max_tokens,
+            "n": 1,
+            "stream": False,
+        }
+        if self.disable_thinking:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+        return payload
+
+    def _post(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        request = urllib.request.Request(
+            self._endpoint(), data=json.dumps(payload).encode("utf-8"),
+            headers=headers, method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                status = int(getattr(response, "status", 200))
+                body = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+            raise VerifierError(f"LLM judge request failed: {type(exc).__name__}: {exc}") from exc
+        return status, body
+
+    def score(self, request: VerifierRequest) -> VerifierOutput:
+        started = time.perf_counter()
+        status, body = self._post(self._payload(request))
+        latency_ms = (time.perf_counter() - started) * 1000.0
+        usage = body.get("usage") if isinstance(body, dict) else None
+        usage = usage if isinstance(usage, dict) else {}
+        prompt_tokens = int(usage.get("prompt_tokens") or 0)
+        completion_tokens = int(usage.get("completion_tokens") or 0)
+        try:
+            content = body["choices"][0]["message"]["content"]
+            text = str(content).strip()
+        except (KeyError, IndexError, TypeError):
+            text = ""
+        if text == SufficiencyLabel.SUFFICIENT.value:
+            label = SufficiencyLabel.SUFFICIENT
+            parse_ok = True
+            reason = "llm_judge"
+        elif text == SufficiencyLabel.INSUFFICIENT.value:
+            label = SufficiencyLabel.INSUFFICIENT
+            parse_ok = True
+            reason = "llm_judge"
+        else:
+            # Fail closed: a malformed/unparseable judge verdict is never treated as sufficient.
+            label = SufficiencyLabel.INSUFFICIENT
+            parse_ok = False
+            reason = "llm_judge_parse_failure"
+        self.stats.record(LLMJudgeCall(
+            latency_ms=latency_ms, prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens, label=label.value,
+            parse_ok=parse_ok, status=status,
+        ))
+        raw = {
+            "kind": self.kind,
+            "latency_ms": latency_ms,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "parse_ok": parse_ok,
+            "status": status,
+        }
+        if not parse_ok:
+            raw["raw_content"] = text[:200]
+        return VerifierOutput(
+            label,
+            {SufficiencyLabel.SUFFICIENT.value: 1.0 if parse_ok and label is SufficiencyLabel.SUFFICIENT else 0.0,
+             SufficiencyLabel.INSUFFICIENT.value: 1.0 if label is SufficiencyLabel.INSUFFICIENT else 0.0},
+            reason=reason,
+            raw=raw,
+        )
+
+
 def build_verifier_from_spec(spec: dict[str, Any]) -> SufficiencyVerifier | None:
     """Optional config factory used by the runner for verifier arms."""
     raw = spec.get("sufficiency_verifier")
@@ -331,6 +539,16 @@ def build_verifier_from_spec(spec: dict[str, Any]) -> SufficiencyVerifier | None
     if kind == "http":
         return HTTPSufficiencyVerifier(
             str(raw["endpoint"]), timeout_seconds=float(raw.get("timeout_seconds", 5.0)))
+    if kind == "llm_judge":
+        return LLMJudgeSufficiencyVerifier(
+            base_url=str(raw["base_url"]),
+            model=str(raw["model"]),
+            timeout_seconds=float(raw.get("timeout_seconds", 60.0)),
+            max_tokens=int(raw.get("max_tokens", 8)),
+            api_key=raw.get("api_key"),
+            api_key_env=raw.get("api_key_env"),
+            disable_thinking=bool(raw.get("disable_thinking", True)),
+        )
     if kind == "local":
         return LocalSufficiencyVerifier(
             model_dir=str(raw["model_dir"]),

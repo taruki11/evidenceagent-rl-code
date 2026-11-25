@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="470" viewBox="0 0 1040 470" role="img" aria-label="Phase 7 OOD Transfer and LLM-as-a-Judge Baseline">
+<defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; fill: #1f2937; }
+    .title { font-size: 16px; font-weight: 700; }
+    .subtitle { font-size: 12px; fill: #4b5563; }
+    .panel-title { font-size: 13.5px; font-weight: 700; fill: #111827; }
+    .axis-label { font-size: 11.5px; font-weight: 600; fill: #374151; }
+    .tick { font-size: 10.5px; fill: #4b5563; }
+    .val { font-size: 10px; font-weight: 600; fill: #111827; }
+    .legend { font-size: 11px; fill: #374151; }
+    .note { font-size: 10px; fill: #6b7280; }
+  </style>
+</defs>
+<rect width="1040" height="470" fill="#ffffff" rx="8"/>
+
+<text x="32" y="32" class="title">Figure 5. Phase 7: OOD 2Wiki Transfer and External LLM-as-a-Judge Baseline</text>
+<text x="32" y="51" class="subtitle">Rep 1/2 means on fresh OOD tasks; the zero-shot LLM judge is compared with the retained 568M BF16 verifier on held-out v2.</text>
+<text x="32" y="80" class="panel-title">(a) OOD ood-2wiki-mixed180 (Rep 1/2 Mean)</text>
+<text x="32" y="103" class="tick" font-weight="600">A0 (off)</text>
+<rect x="190" y="92" width="330" height="18" fill="#f3f4f6" rx="4"/>
+<rect x="190" y="92" width="128.2" height="18" fill="#9ca3af" rx="4"/>
+<text x="325.2" y="105" class="val">Macro 0.2137</text>
+<rect x="190" y="115" width="330" height="18" fill="#f3f4f6" rx="4"/>
+<rect x="190" y="115" width="210.8" height="18" fill="#9ca3af" opacity="0.55" rx="4"/>
+<text x="407.8" y="128" class="val">Risk 0.9584</text>
+<text x="32" y="169" class="tick" font-weight="600">A1 (min-2)</text>
+<rect x="190" y="158" width="330" height="18" fill="#f3f4f6" rx="4"/>
+<rect x="190" y="158" width="96.5" height="18" fill="#ef4444" rx="4"/>
+<text x="293.5" y="171" class="val">Macro 0.1608</text>
+<rect x="190" y="181" width="330" height="18" fill="#f3f4f6" rx="4"/>
+<rect x="190" y="181" width="289.7" height="18" fill="#ef4444" opacity="0.55" rx="4"/>
+<text x="486.7" y="194" class="val">Risk 1.3167</text>
+<text x="32" y="235" class="tick" font-weight="600">A2 (contract)</text>
+<rect x="190" y="224" width="330" height="18" fill="#f3f4f6" rx="4"/>
+<rect x="190" y="224" width="149.6" height="18" fill="#f59e0b" rx="4"/>
+<text x="346.6" y="237" class="val">Macro 0.2493</text>
+<rect x="190" y="247" width="330" height="18" fill="#f3f4f6" rx="4"/>
+<rect x="190" y="247" width="102.7" height="18" fill="#f59e0b" opacity="0.55" rx="4"/>
+<text x="299.7" y="260" class="val">Risk 0.4667</text>
+<text x="32" y="301" class="tick" font-weight="600">Vh-ctrl (Ours)</text>
+<rect x="190" y="290" width="330" height="18" fill="#f3f4f6" rx="4"/>
+<rect x="190" y="290" width="267.8" height="18" fill="#059669" rx="4"/>
+<text x="464.8" y="303" class="val">Macro 0.4464</text>
+<rect x="190" y="313" width="330" height="18" fill="#f3f4f6" rx="4"/>
+<rect x="190" y="313" width="55.0" height="18" fill="#059669" opacity="0.55" rx="4"/>
+<text x="252.0" y="326" class="val">Risk 0.2500</text>
+<line x1="190" y1="86" x2="190" y2="352" stroke="#374151" stroke-width="1"/>
+<text x="190" y="380" class="axis-label">OOD Macro Utility (upper, ↑) · Selective Risk (lower, ↓)</text>
+<text x="575" y="80" class="panel-title">(b) v2: Local 568M vs. Zero-Shot LLM Judge (Rep 1/2 Mean)</text>
+<text x="575" y="105" class="tick" font-weight="600">Macro Utility
+(↑ better)</text>
+<rect x="707" y="92" width="113.9" height="17" fill="#059669" rx="3"/>
+<text x="825.9" y="104" class="val">0.464</text>
+<rect x="853" y="92" width="104.7" height="17" fill="#8b5cf6" rx="3"/>
+<text x="962.7" y="104" class="val">0.360</text>
+<text x="575" y="167" class="tick" font-weight="600">Selective Risk
+(↓ better)</text>
+<rect x="707" y="154" width="28.2" height="17" fill="#059669" rx="3"/>
+<text x="740.2" y="166" class="val">0.292</text>
+<rect x="853" y="154" width="73.4" height="17" fill="#8b5cf6" rx="3"/>
+<text x="931.4" y="166" class="val">0.642</text>
+<text x="575" y="229" class="tick" font-weight="600">Abstention F1
+(↑ better)</text>
+<rect x="707" y="216" width="83.3" height="17" fill="#059669" rx="3"/>
+<text x="795.3" y="228" class="val">0.617</text>
+<rect x="853" y="216" width="74.1" height="17" fill="#8b5cf6" rx="3"/>
+<text x="932.1" y="228" class="val">0.463</text>
+<rect x="707" y="77" width="11" height="11" fill="#059669" rx="2"/>
+<text x="723" y="87" class="legend">568M local</text>
+<rect x="853" y="77" width="11" height="11" fill="#8b5cf6" rx="2"/>
+<text x="869" y="87" class="legend">LLM judge</text>
+<text x="575" y="318" class="tick" font-weight="600">P95 latency (ms, ↓)</text>
+<rect x="707" y="306" width="3.4" height="17" fill="#059669" rx="3"/>
+<text x="728" y="318" class="val">16.32</text>
+<rect x="853" y="306" width="160" height="17" fill="#8b5cf6" rx="3"/>
+<text x="1018" y="318" class="val">1,161</text>
+<text x="707" y="337" class="note">~70× faster at P95</text>
+<text x="575" y="366" class="tick" font-weight="600">Extra tokens / run</text>
+<rect x="707" y="354" width="4" height="17" fill="#059669" rx="3"/>
+<text x="715" y="366" class="val">0</text>
+<rect x="853" y="354" width="160" height="17" fill="#8b5cf6" rx="3"/>
+<text x="1018" y="366" class="val">~46.3k</text>
+<text x="707" y="385" class="note">judge calls: 287 / 284; parse failures: 0</text>
+<text x="575" y="450" class="note">OOD: H1/H2 pass; H3 fails only on r2 halluc-vs-A2 p=0.1628. Judge: report-only baseline; lower is better for risk/latency/tokens.</text>
+</svg>

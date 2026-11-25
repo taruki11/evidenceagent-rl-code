@@ -2,7 +2,7 @@
 
 **Replayable Evidence Firewall, Pre-Registered Controls, and Decoupled Binary Sufficiency Verification with Controller-Owned Abstention**
 
-[![Offline Checks](https://github.com/taruki11/evidenceagent-rl-code/actions/workflows/ci.yml/badge.svg)](https://github.com/taruki11/evidenceagent-rl-code/actions/workflows/ci.yml)
+[![Offline Checks](https://github.com/taruki11/evidenceagent-rl-code/actions/workflows/offline-checks.yml/badge.svg)](https://github.com/taruki11/evidenceagent-rl-code/actions/workflows/ci.yml)
 
 `EvidenceAgent-RL` is a deterministic, zero-dependency core harness and pre-registered evaluation framework for tool-using retrieval agents operating across mixed-evidence regimes:
 - **1-gold**: single-document answerable queries;
@@ -31,6 +31,35 @@ When plugging the same frozen **568M BF16 Binary Sufficiency Verifier** (`0.954�
   - **`Gemma-3-12B`** (zero task SFT, 3× scale): **+85% Macro Utility** vs. `A2` (`0.1944 → 0.3560`), **-79% Selective Risk** vs. `A2` (`0.6333 → 0.1333`), `1-gold` preserved (`32/32`, `p = 4.66e-10` vs. `A1`), `0-gold` explicit abstentions jump from `0/60` (Phase 5) to **`36/60`** (`F1 = 0.5106 / 0.5180`, `p = 2.91e-11`), cutting hallucinations to **`3/60` (5%)** (`p = 1.42e-14` vs. `A0`, `p <= 3.67e-8` vs. `A2`).
 - **Mechanism Breakdown (`Phase 6C`)**: Read-only trace decomposition proves Gemma issues **0/60** model-side `abstain` calls; all `36/36` `0-gold` explicit abstentions are **100% controller-owned** (`2/2` via `budget=0`, `15/14` via 12-decision limit, `19/20` via hint-ignored takeover). Only `2/60` `Vh-ctrl` failures on Gemma `2-gold` occur after full support selection; the `0–3/60` `2-gold` ceiling across all arms is a zero-SFT multi-hop planning bottleneck (`36–42/60` selection misses, `10–14/60` retrieval misses).
 
+### OOD 2Wiki Transfer and External LLM-as-a-Judge (`Phase 7`, 2026-11-25)
+
+On a fresh, zero-overlap `ood-2wiki-mixed180` set (60 2-gold / 60 0-gold / 60 1-gold; source intersection 0), the same four arms were run with `Qwen3-4B+V8` on a ROCm `vLLM 0.33.0+rocm72` stack with AITER:
+
+| Arm | Rep | Macro Utility (↑) | Selective Risk (↓) | 1-gold (/60) | 2-gold (/60) | 0-gold Explicit (/60) | 0-gold Halluc (/60) | Abst. F1 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `A0` | 1 / 2 | 0.2109 / 0.2165 | 0.9500 / 0.9667 | 36 / 37 | 0 / 0 | 1 / 1 | 55 / 56 | 0.0328 |
+| `A1` | 1 / 2 | 0.1595 / 0.1620 | 1.3167 / 1.3167 | 0 / 0 | 9 / 9 | 22 / 22 | 20 / 21 | 0.3284 / 0.3359 |
+| `A2` | 1 / 2 | 0.2493 / 0.2493 | 0.4833 / 0.4500 | 36 / 36 | 5 / 5 | 2 / 2 | 26 / 24 | 0.0645 |
+| **`Vh-ctrl` (Ours)** | 1 / 2 | **0.4483 / 0.4444** | **0.2333 / 0.2667** | **37 / 36** | 4 / 4 | **42 / 42** | **13 / 15** | **0.6614 / 0.6667** |
+
+- **`P7-OOD-H1` PASS**: macro above `A0/A1/A2` and risk below all in both reps.
+- **`P7-OOD-H2` PASS**: 1-gold `37/36` vs. `A1` `0`, `p ≈ 1.5e-11 / 2.9e-11`.
+- **`P7-OOD-H3` FAIL**: explicit abstention is `42/42` and F1 `0.6614/0.6667`, but Rep 2 hallucination-vs-`A2` gives `p = 0.1628` (pre-registered `<0.05` not met). This is reported as a partial OOD honesty result.
+- **2-gold remains open**: `4/4` vs. `A1` `9/9`.
+
+Zero-shot LLM-as-a-Judge vs. the retained 568M BF16 verifier on `hv-mixed180-heldout-v2`:
+
+| Metric | Local 568M r1 / r2 | LLM judge r1 / r2 |
+|---|---:|---:|
+| Macro Utility (↑) | **0.4611 / 0.4670** | 0.3585 / 0.3613 |
+| Selective Risk (↓) | **0.3000 / 0.2833** | 0.6500 / 0.6333 |
+| Abstention F1 (↑) | **0.6165 / 0.6176** | 0.4587 / 0.4673 |
+| P95 latency (ms) | **16.32** | 1,206.6 / 1,116.3 (~70×) |
+| Total tokens / run | 0 | 46,569 / 46,021 (~46.3k) |
+| Parse failures | — | 0 |
+
+The judge is **report-only** and is dominated on effect, latency and token cost; it does not replace the local verifier.
+
 ### Blind Held-Out v1 (`Phase 4`, Single-Model Baselines)
 
 On `hv-mixed180-heldout` (`Qwen3-4B+V8`, 6 arms × 2 reps = 2,160 episodes, 0 hard errors): `Vh-bin` lifts Macro Utility by **+72%** over the strongest baseline `C2` (`0.2431/0.2486 → 0.4234/0.4236`), reduces Selective Risk by **-33%** (`0.5000/0.5333 → 0.3500/0.3333`), preserves `1-gold` (`34/34` vs. `A0 36/36`), and lifts `0-gold` explicit abstention F1 from `0.0625/0.3214` to `0.6034/0.6207` (clearing `p < 0.05` vs. `A2` hallucination at `p = 0.035/0.016`, missing only the overly strict pre-registered `p < 0.001` clause at `n = 60`).
@@ -51,12 +80,15 @@ On `hv-mixed180-heldout` (`Qwen3-4B+V8`, 6 arms × 2 reps = 2,160 episodes, 0 ha
 ### 4. Controlled Six-Phase Scientific Progression
 ![Figure 3: Six-Phase Progression](assets/figures/fig3_progression_dev_to_heldout.svg)
 
+### 5. OOD 2Wiki and LLM-as-a-Judge (`Phase 7`)
+![Figure 5: OOD 2Wiki Transfer and LLM-as-a-Judge Baseline](assets/figures/fig5_phase7_ood_and_llmjudge.svg)
+
 ---
 
 ## Architecture & Repository Layout
 
 - `src/evidence_agent_rl/harness.py` & `skills.py`: Deterministic, replayable `EvidenceHarness` enforcing the **Evidence Firewall** (strategy memory can guide search/stop but can never enter citation chains) and the **Controller-Owned Bounded-Repair → Abstain** state machine.
-- `src/evidence_agent_rl/sufficiency_verifier.py`: Dependency-light interfaces for binary/ternary external sufficiency verification (`format_verifier_text`, temperature calibration, `LocalSufficiencyVerifier`, `HTTPSufficiencyVerifier`, `ScriptedSufficiencyVerifier`).
+- `src/evidence_agent_rl/sufficiency_verifier.py`: Dependency-light interfaces for binary/ternary external sufficiency verification (`format_verifier_text`, temperature calibration, `LocalSufficiencyVerifier`, `HTTPSufficiencyVerifier`, `ScriptedSufficiencyVerifier`, and the Phase 7 zero-shot `LLMJudgeSufficiencyVerifier` with strict fail-closed parsing and per-call latency/token stats).
 - `src/evidence_agent_rl/claim_support.py` & `public_contract.py`: Gold-free local claim-support guard and public question-derived support contracts.
 - `scripts/audit_hv_failure_funnel.py`: Zero-GPU mutually exclusive 6-bucket failure-funnel auditor.
 - `scripts/generate_paper_figures.py`: Zero-dependency SVG figure generator backed by frozen audit metrics.

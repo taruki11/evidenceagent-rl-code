@@ -444,6 +444,88 @@ def generate_fig4_crossmodel_phase6() -> str:
     return "\n".join(parts)
 
 
+def generate_fig5_phase7_ood_and_llmjudge() -> str:
+    """Fig 5: Phase 7 OOD 2Wiki transfer and external LLM-judge baseline."""
+    w, h = 1040, 470
+    parts = [svg_header(w, h, "Phase 7 OOD Transfer and LLM-as-a-Judge Baseline")]
+    parts.append(
+        '<text x="32" y="32" class="title">Figure 5. Phase 7: OOD 2Wiki Transfer and External LLM-as-a-Judge Baseline</text>'
+    )
+    parts.append(
+        '<text x="32" y="51" class="subtitle">'
+        "Rep 1/2 means on fresh OOD tasks; the zero-shot LLM judge is compared with the retained 568M BF16 verifier on held-out v2."
+        "</text>"
+    )
+
+    # Panel (a): grouped horizontal bars, macro utility and selective risk.
+    lx, ly, lw, lh = 190, 92, 330, 300
+    parts.append(f'<text x="32" y="80" class="panel-title">(a) OOD ood-2wiki-mixed180 (Rep 1/2 Mean)</text>')
+    arms = [
+        ("A0 (off)", 0.2137, 0.9584, "#9ca3af"),
+        ("A1 (min-2)", 0.1608, 1.3167, "#ef4444"),
+        ("A2 (contract)", 0.2493, 0.4667, "#f59e0b"),
+        ("Vh-ctrl (Ours)", 0.4464, 0.2500, "#059669"),
+    ]
+    # Scale macro 0..0.55 and risk 0..1.5; draw separate tracks so units are unambiguous.
+    for i, (label, macro, risk, color) in enumerate(arms):
+        y = ly + i * 66
+        # macro track
+        mw = (macro / 0.55) * lw
+        parts.append(f'<text x="32" y="{y + 11}" class="tick" font-weight="600">{escape(label)}</text>')
+        parts.append(f'<rect x="{lx}" y="{y}" width="{lw}" height="18" fill="#f3f4f6" rx="4"/>')
+        parts.append(f'<rect x="{lx}" y="{y}" width="{mw:.1f}" height="18" fill="{color}" rx="4"/>')
+        parts.append(f'<text x="{lx + mw + 7:.1f}" y="{y + 13}" class="val">Macro {macro:.4f}</text>')
+        # risk track
+        rw = (risk / 1.50) * lw
+        parts.append(f'<rect x="{lx}" y="{y + 23}" width="{lw}" height="18" fill="#f3f4f6" rx="4"/>')
+        parts.append(f'<rect x="{lx}" y="{y + 23}" width="{rw:.1f}" height="18" fill="{color}" opacity="0.55" rx="4"/>')
+        parts.append(f'<text x="{lx + rw + 7:.1f}" y="{y + 36}" class="val">Risk {risk:.4f}</text>')
+    parts.append(f'<line x1="{lx}" y1="{ly - 6}" x2="{lx}" y2="{ly + 4 * 66 - 4}" stroke="#374151" stroke-width="1"/>')
+    parts.append(f'<text x="{lx}" y="{ly + 4 * 66 + 24}" class="axis-label">OOD Macro Utility (upper, ↑) · Selective Risk (lower, ↓)</text>')
+
+    # Panel (b): local 568M vs zero-shot LLM judge.
+    rx, ry, rw2, rh2 = 575, 92, 430, 300
+    parts.append(f'<text x="{rx}" y="80" class="panel-title">(b) v2: Local 568M vs. Zero-Shot LLM Judge (Rep 1/2 Mean)</text>')
+    effect = [
+        ("Macro Utility\n(↑ better)", 0.464, 0.360, 0.55),
+        ("Selective Risk\n(↓ better)", 0.292, 0.642, 1.40),
+        ("Abstention F1\n(↑ better)", 0.617, 0.463, 1.00),
+    ]
+    for i, (label, local, judge, vmax) in enumerate(effect):
+        y = ry + i * 62
+        parts.append(f'<text x="{rx}" y="{y + 13}" class="tick" font-weight="600">{escape(label)}</text>')
+        # local bar
+        lw_bar = (local / vmax) * 135
+        jw_bar = (judge / vmax) * 160
+        parts.append(f'<rect x="{rx + 132}" y="{y}" width="{lw_bar:.1f}" height="17" fill="#059669" rx="3"/>')
+        parts.append(f'<text x="{rx + 132 + lw_bar + 5:.1f}" y="{y + 12}" class="val">{local:.3f}</text>')
+        parts.append(f'<rect x="{rx + 278}" y="{y}" width="{jw_bar:.1f}" height="17" fill="#8b5cf6" rx="3"/>')
+        parts.append(f'<text x="{rx + 278 + jw_bar + 5:.1f}" y="{y + 12}" class="val">{judge:.3f}</text>')
+    parts.append(f'<rect x="{rx + 132}" y="{ry - 15}" width="11" height="11" fill="#059669" rx="2"/>')
+    parts.append(f'<text x="{rx + 148}" y="{ry - 5}" class="legend">568M local</text>')
+    parts.append(f'<rect x="{rx + 278}" y="{ry - 15}" width="11" height="11" fill="#8b5cf6" rx="2"/>')
+    parts.append(f'<text x="{rx + 294}" y="{ry - 5}" class="legend">LLM judge</text>')
+
+    # Efficiency row: P95 baseline scaled to 1,161ms; token baseline 46.3k.
+    ey = ry + 214
+    parts.append(f'<text x="{rx}" y="{ey + 12}" class="tick" font-weight="600">P95 latency (ms, ↓)</text>')
+    parts.append(f'<rect x="{rx + 132}" y="{ey}" width="{16.32 / 1161.0 * 240:.1f}" height="17" fill="#059669" rx="3"/>')
+    parts.append(f'<text x="{rx + 153}" y="{ey + 12}" class="val">16.32</text>')
+    parts.append(f'<rect x="{rx + 278}" y="{ey}" width="160" height="17" fill="#8b5cf6" rx="3"/>')
+    parts.append(f'<text x="{rx + 443}" y="{ey + 12}" class="val">1,161</text>')
+    parts.append(f'<text x="{rx + 132}" y="{ey + 31}" class="note">~70× faster at P95</text>')
+    ey2 = ey + 48
+    parts.append(f'<text x="{rx}" y="{ey2 + 12}" class="tick" font-weight="600">Extra tokens / run</text>')
+    parts.append(f'<rect x="{rx + 132}" y="{ey2}" width="4" height="17" fill="#059669" rx="3"/>')
+    parts.append(f'<text x="{rx + 140}" y="{ey2 + 12}" class="val">0</text>')
+    parts.append(f'<rect x="{rx + 278}" y="{ey2}" width="160" height="17" fill="#8b5cf6" rx="3"/>')
+    parts.append(f'<text x="{rx + 443}" y="{ey2 + 12}" class="val">~46.3k</text>')
+    parts.append(f'<text x="{rx + 132}" y="{ey2 + 31}" class="note">judge calls: 287 / 284; parse failures: 0</text>')
+    parts.append(f'<text x="{rx}" y="{h - 20}" class="note">OOD: H1/H2 pass; H3 fails only on r2 halluc-vs-A2 p=0.1628. Judge: report-only baseline; lower is better for risk/latency/tokens.</text>')
+    parts.append("</svg>\n")
+    return "\n".join(parts)
+
+
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     files = {
@@ -451,6 +533,7 @@ def main() -> None:
         "fig2_unidentifiability_vs_binary.svg": generate_fig2_unidentifiability(),
         "fig3_progression_dev_to_heldout.svg": generate_fig3_progression(),
         "fig4_crossmodel_controller_phase6.svg": generate_fig4_crossmodel_phase6(),
+        "fig5_phase7_ood_and_llmjudge.svg": generate_fig5_phase7_ood_and_llmjudge(),
     }
     for name, content in files.items():
         path = OUT_DIR / name
